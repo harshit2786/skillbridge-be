@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Trainer {
+  id        String  @unique   @id   @default(uuid())
+  email     String  @unique
+  name      String?
+  password  String
+  projects_trainer   Project[] @relation("TrainerProjects")
+  project_admin     Project[]
+  quiz_creators     Quiz[] @relation("QuizCreators")
+  course_creators   Course[] @relation("CourseCreators")
+}
+
+model Trainee {
+  id        String  @unique   @id     @default(uuid())
+  phone     String  @unique
+  name      String?
+  projects_trainee   Project[] @relation("TraineeProjects")
+}
+
+model Project {
+  id          String  @unique   @id   @default(uuid())
+  name        String
+  description String?
+  trainers    Trainer[] @relation("TrainerProjects")
+  trainees    Trainee[]  @relation("TraineeProjects")
+  adminId      String
+  admin        Trainer @relation(fields: [adminId], references: [id])
+  quizes       Quiz[]
+  courses      Course[]
+  createdAt    DateTime @default(now())
+}
+
+model Quiz {
+  id          String  @unique   @id   @default(uuid())
+  name        String
+  description String?
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id])
+  published   Boolean @default(false)
+  creators      Trainer[] @relation("QuizCreators")
+  createdAt    DateTime @default(now())
+}
+
+model Course {
+  id          String  @unique   @id   @default(uuid())
+  name        String
+  description String?
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id])
+  published   Boolean @default(false)
+  creators      Trainer[] @relation("CourseCreators")
+  createdAt    DateTime @default(now())
+}
+
+model Otp {
+  id        String   @id @default(uuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
