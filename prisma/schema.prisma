@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -41,6 +35,7 @@ model Project {
   admin        Trainer @relation(fields: [adminId], references: [id])
   quizes       Quiz[]
   courses      Course[]
+  contents     ProjectContent[]
   createdAt    DateTime @default(now())
 }
 
@@ -52,6 +47,7 @@ model Quiz {
   project     Project @relation(fields: [projectId], references: [id])
   published   Boolean @default(false)
   creators      Trainer[] @relation("QuizCreators")
+  content       ProjectContent?
   createdAt    DateTime @default(now())
 }
 
@@ -63,7 +59,28 @@ model Course {
   project     Project @relation(fields: [projectId], references: [id])
   published   Boolean @default(false)
   creators      Trainer[] @relation("CourseCreators")
+  content       ProjectContent?
   createdAt    DateTime @default(now())
+}
+
+model ProjectContent {
+  id          String  @unique   @id   @default(uuid())
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id])
+  type        ContentType
+  quizId      String?   @unique
+  quiz        Quiz?     @relation(fields: [quizId], references: [id])
+  courseId     String?   @unique
+  course      Course?   @relation(fields: [courseId], references: [id])
+  position    Int
+
+  @@unique([projectId, position])
+  @@index([projectId])
+}
+
+enum ContentType {
+  QUIZ
+  COURSE
 }
 
 model Otp {

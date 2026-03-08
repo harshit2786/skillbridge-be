@@ -18,23 +18,44 @@ export const createQuiz = async (
       return;
     }
 
-    const quiz = await prisma.quiz.create({
-      data: {
-        name,
-        description,
-        projectId,
-      },
+    // Get the next position
+    const lastContent = await prisma.projectContent.findFirst({
+      where: { projectId },
+      orderBy: { position: "desc" },
+    });
+    const nextPosition = lastContent ? lastContent.position + 1 : 1;
+
+    // Create quiz and content entry in a transaction
+    const quiz = await prisma.$transaction(async (tx) => {
+      const newQuiz = await tx.quiz.create({
+        data: {
+          name,
+          description,
+          projectId,
+        },
+      });
+
+      await tx.projectContent.create({
+        data: {
+          projectId,
+          type: "QUIZ",
+          quizId: newQuiz.id,
+          position: nextPosition,
+        },
+      });
+
+      return newQuiz;
     });
 
     res.status(201).json({
       message: "Quiz created successfully",
       quiz,
+      position: nextPosition,
     });
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // GET /api/projects/:projectId/quizzes
 export const getQuizzesByProject = async (
   req: Request,

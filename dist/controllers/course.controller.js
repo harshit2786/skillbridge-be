@@ -12,16 +12,33 @@ export const createCourse = async (req, res) => {
             res.status(400).json({ message: "Course name is required" });
             return;
         }
-        const course = await prisma.course.create({
-            data: {
-                name,
-                description,
-                projectId,
-            },
+        const lastContent = await prisma.projectContent.findFirst({
+            where: { projectId },
+            orderBy: { position: "desc" },
+        });
+        const nextPosition = lastContent ? lastContent.position + 1 : 1;
+        const course = await prisma.$transaction(async (tx) => {
+            const newCourse = await tx.course.create({
+                data: {
+                    name,
+                    description,
+                    projectId,
+                },
+            });
+            await tx.projectContent.create({
+                data: {
+                    projectId,
+                    type: "COURSE",
+                    courseId: newCourse.id,
+                    position: nextPosition,
+                },
+            });
+            return newCourse;
         });
         res.status(201).json({
             message: "Course created successfully",
             course,
+            position: nextPosition,
         });
     }
     catch (error) {

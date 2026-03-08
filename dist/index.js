@@ -7,13 +7,12 @@ import traineeAuthRoutes from "./routes/trainee.auth.routes.js";
 import projectRoutes from "./routes/project.routes.js";
 import quizRoutes from "./routes/quiz.routes.js";
 import courseRoutes from "./routes/course.routes.js";
+import contentRoutes from "./routes/content.routes.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
-// Global middlewares
 app.use(cors());
 app.use(express.json());
-// Health check
 app.get("/health", (req, res) => {
     res.json({ status: "ok" });
 });
@@ -23,7 +22,7 @@ app.use("/api/trainee", traineeAuthRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/projects/:projectId/quizzes", quizRoutes);
 app.use("/api/projects/:projectId/courses", courseRoutes);
-// Error handler
+app.use("/api/projects/:projectId/contents", contentRoutes);
 app.use(errorHandler);
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
