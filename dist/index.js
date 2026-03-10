@@ -10,6 +10,8 @@ import courseRoutes from "./routes/course.routes.js";
 import contentRoutes from "./routes/content.routes.js";
 import resourceRoutes from "./routes/resource.routes.js";
 import playgroundRoutes from "./routes/playground.routes.js";
+import sectionRoutes from "./routes/section.routes.js";
+import questionRoutes from "./routes/question.routes.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,6 +29,8 @@ app.use("/api/projects/:projectId/courses", courseRoutes);
 app.use("/api/projects/:projectId/contents", contentRoutes);
 app.use("/api/projects/:projectId/resources", resourceRoutes);
 app.use("/api/projects/:projectId/playground", playgroundRoutes);
+app.use("/api/projects/:projectId/quizzes/:quizId/sections", sectionRoutes);
+app.use("/api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions", questionRoutes);
 app.use(errorHandler);
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

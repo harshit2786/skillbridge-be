@@ -8,7 +8,8 @@ export const createQuiz = async (
 ): Promise<void> => {
   try {
     const { projectId } = req.params;
-    const { name, description } = req.body;
+    const { name, description, passingPercent, creatorIds } = req.body;
+
     if (typeof projectId !== "string") {
       res.status(400).json({ message: "Project ID is required" });
       return;
@@ -16,6 +17,29 @@ export const createQuiz = async (
     if (!name) {
       res.status(400).json({ message: "Quiz name is required" });
       return;
+    }
+
+    // Validate creatorIds if provided
+    if (creatorIds && Array.isArray(creatorIds) && creatorIds.length > 0) {
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        include: {
+          trainers: { select: { id: true } },
+        },
+      });
+
+      const projectTrainerIds = project?.trainers.map((t) => t.id) || [];
+      const invalidTrainers = creatorIds.filter(
+        (id: string) => !projectTrainerIds.includes(id),
+      );
+
+      if (invalidTrainers.length > 0) {
+        res.status(400).json({
+          message: "Some trainers are not members of this project",
+          invalidTrainers,
+        });
+        return;
+      }
     }
 
     // Get the next position
@@ -32,6 +56,18 @@ export const createQuiz = async (
           name,
           description,
           projectId,
+          passingPercent: passingPercent || 0,
+          ...(creatorIds &&
+            creatorIds.length > 0 && {
+              creators: {
+                connect: creatorIds.map((id: string) => ({ id })),
+              },
+            }),
+        },
+        include: {
+          creators: {
+            select: { id: true, name: true, email: true },
+          },
         },
       });
 
@@ -120,8 +156,6 @@ export const getQuizById = async (
 ): Promise<void> => {
   try {
     const { projectId, quizId } = req.params;
-    const userId = req.userId!;
-    const role = req.role!;
     if (typeof projectId !== "string") {
       res.status(400).json({ message: "Project ID is required" });
       return;
@@ -130,7 +164,9 @@ export const getQuizById = async (
       res.status(400).json({ message: "Quiz ID is required" });
       return;
     }
-    // Verify membership
+    const userId = req.userId!;
+    const role = req.role!;
+
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       include: {
@@ -159,6 +195,23 @@ export const getQuizById = async (
       include: {
         creators: {
           select: { id: true, name: true, email: true },
+        },
+        content: {
+          select: { position: true },
+        },
+        sections: {
+          orderBy: { order: "asc" },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            order: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: {
+              select: { questions: true },
+            },
+          },
         },
       },
     });

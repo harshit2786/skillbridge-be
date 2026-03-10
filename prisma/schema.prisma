@@ -48,11 +48,12 @@ model Quiz {
   name        String
   description String?
   projectId   String
-  project     Project @relation(fields: [projectId], references: [id])
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   published   Boolean @default(false)
   creators      Trainer[] @relation("QuizCreators")
   content       ProjectContent?
-  sections    Section[]
+  sections    QuizSection[]
+  passingPercent     Int        @default(0) // minimum points required to pass
   createdAt    DateTime @default(now())
 }
 
@@ -61,7 +62,7 @@ model Course {
   name        String
   description String?
   projectId   String
-  project     Project @relation(fields: [projectId], references: [id])
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   published   Boolean @default(false)
   creators      Trainer[] @relation("CourseCreators")
   content       ProjectContent?
@@ -167,8 +168,8 @@ enum MessageRole {
   ASSISTANT
 }
 
-// ─── Section ─────────────────────────────────
-model Section {
+// ─── QuizSection ─────────────────────────────────
+model QuizSection {
   id          String     @id @default(cuid())
   quizId      String
   quiz        Quiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
@@ -188,7 +189,7 @@ model Section {
 model Question {
   id        String       @id @default(cuid())
   sectionId String
-  section   Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  section   QuizSection      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   type      QuestionType
   question  String
   points    Int          @default(0)
