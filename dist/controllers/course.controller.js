@@ -3,7 +3,7 @@ import prisma from "../lib/prisma.js";
 export const createCourse = async (req, res) => {
     try {
         const { projectId } = req.params;
-        const { name, description } = req.body;
+        const { name, description, creatorIds } = req.body;
         if (typeof projectId !== "string") {
             res.status(400).json({ message: "Project ID is required" });
             return;
@@ -11,6 +11,23 @@ export const createCourse = async (req, res) => {
         if (!name) {
             res.status(400).json({ message: "Course name is required" });
             return;
+        }
+        if (creatorIds && Array.isArray(creatorIds) && creatorIds.length > 0) {
+            const project = await prisma.project.findUnique({
+                where: { id: projectId },
+                include: {
+                    trainers: { select: { id: true } },
+                },
+            });
+            const projectTrainerIds = project?.trainers.map((t) => t.id) || [];
+            const invalidTrainers = creatorIds.filter((id) => !projectTrainerIds.includes(id));
+            if (invalidTrainers.length > 0) {
+                res.status(400).json({
+                    message: "Some trainers are not members of this project",
+                    invalidTrainers,
+                });
+                return;
+            }
         }
         const lastContent = await prisma.projectContent.findFirst({
             where: { projectId },
@@ -23,6 +40,17 @@ export const createCourse = async (req, res) => {
                     name,
                     description,
                     projectId,
+                    ...(creatorIds &&
+                        creatorIds.length > 0 && {
+                        creators: {
+                            connect: creatorIds.map((id) => ({ id })),
+                        },
+                    }),
+                },
+                include: {
+                    creators: {
+                        select: { id: true, name: true, email: true },
+                    },
                 },
             });
             await tx.projectContent.create({
@@ -55,7 +83,6 @@ export const getCoursesByProject = async (req, res) => {
             res.status(400).json({ message: "Project ID is required" });
             return;
         }
-        // Verify membership
         const project = await prisma.project.findUnique({
             where: { id: projectId },
             include: {
@@ -83,6 +110,9 @@ export const getCoursesByProject = async (req, res) => {
                 creators: {
                     select: { id: true, name: true, email: true },
                 },
+                content: {
+                    select: { position: true },
+                },
             },
             orderBy: { createdAt: "desc" },
         });
@@ -96,8 +126,6 @@ export const getCoursesByProject = async (req, res) => {
 export const getCourseById = async (req, res) => {
     try {
         const { projectId, courseId } = req.params;
-        const userId = req.userId;
-        const role = req.role;
         if (typeof projectId !== "string") {
             res.status(400).json({ message: "Project ID is required" });
             return;
@@ -106,6 +134,8 @@ export const getCourseById = async (req, res) => {
             res.status(400).json({ message: "Course ID is required" });
             return;
         }
+        const userId = req.userId;
+        const role = req.role;
         const project = await prisma.project.findUnique({
             where: { id: projectId },
             include: {
@@ -129,6 +159,23 @@ export const getCourseById = async (req, res) => {
             include: {
                 creators: {
                     select: { id: true, name: true, email: true },
+                },
+                content: {
+                    select: { position: true },
+                },
+                sections: {
+                    orderBy: { order: "asc" },
+                    select: {
+                        id: true,
+                        title: true,
+                        description: true,
+                        order: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        _count: {
+                            select: { questions: true },
+                        },
+                    },
                 },
             },
         });

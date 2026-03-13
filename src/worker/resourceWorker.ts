@@ -5,7 +5,7 @@ import { Storage } from "@google-cloud/storage";
 import { v4 as uuidv4 } from "uuid";
 import { getEmbeddings } from "../lib/embeddings.js";
 import { upsertVectors, initQdrantCollection } from "../lib/qdrant.js";
-import type { ResourceJobData } from "../lib/queue.js";
+import { redisConnection, type ResourceJobData } from "../lib/queue.js";
 import { PDFParse } from "pdf-parse";
 
 const prisma = new PrismaClient();
@@ -16,7 +16,6 @@ const storage = new Storage({
 });
 const bucket = storage.bucket(process.env.GCS_BUCKET_NAME || "");
 
-const redisUrl = new URL(process.env.REDIS_URL || "redis://localhost:6379");
 
 // --- Helpers ---
 
@@ -161,12 +160,7 @@ const startWorker = async () => {
   await initQdrantCollection();
 
   const worker = new Worker("resource-processing", processResource, {
-    connection: {
-      host: redisUrl.hostname,
-      port: Number(redisUrl.port) || 6379,
-      password: redisUrl.password || undefined,
-      maxRetriesPerRequest: null,
-    },
+    connection: redisConnection,
     concurrency: 2, // Process 2 jobs at a time
   });
 

@@ -10,8 +10,11 @@ import courseRoutes from "./routes/course.routes.js";
 import contentRoutes from "./routes/content.routes.js";
 import resourceRoutes from "./routes/resource.routes.js";
 import playgroundRoutes from "./routes/playground.routes.js";
-import sectionRoutes from "./routes/section.routes.js";
-import questionRoutes from "./routes/question.routes.js";
+import sectionRoutes from "./routes/quizSection.routes.js";
+import questionRoutes from "./routes/quizQuestion.routes.js";
+import courseSectionRoutes from "./routes/courseSection.routes.js";
+import courseQuestionRoutes from "./routes/courseQuestion.routes.js";
+import learnRoutes from "./routes/learn.routes.js";
 
 dotenv.config();
 
@@ -35,8 +38,19 @@ app.use("/api/projects/:projectId/contents", contentRoutes);
 app.use("/api/projects/:projectId/resources", resourceRoutes);
 app.use("/api/projects/:projectId/playground", playgroundRoutes);
 app.use("/api/projects/:projectId/quizzes/:quizId/sections", sectionRoutes);
-app.use("/api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions", questionRoutes);
-
+app.use(
+  "/api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions",
+  questionRoutes,
+);
+app.use(
+  "/api/projects/:projectId/courses/:courseId/sections",
+  courseSectionRoutes,
+);
+app.use(
+  "/api/projects/:projectId/courses/:courseId/sections/:sectionId/questions",
+  courseQuestionRoutes,
+);
+app.use("/api/projects/:projectId/learn", learnRoutes);
 app.use(errorHandler);
 
 app.listen(PORT, () => {

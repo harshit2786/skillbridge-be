@@ -24,6 +24,7 @@ model Trainee {
   phone     String  @unique
   name      String?
   chats       Chat[]
+  progresses   TraineeProgress[]
   projects_trainee   Project[] @relation("TraineeProjects")
 }
 
@@ -39,6 +40,7 @@ model Project {
   courses      Course[]
   resources    Resource[]
   chats       Chat[]
+  traineeProgresses TraineeProgress[]
   contents     ProjectContent[]
   createdAt    DateTime @default(now())
 }
@@ -53,6 +55,7 @@ model Quiz {
   creators      Trainer[] @relation("QuizCreators")
   content       ProjectContent?
   sections    QuizSection[]
+  attempts QuizAttempt[]
   passingPercent     Int        @default(0) // minimum points required to pass
   createdAt    DateTime @default(now())
 }
@@ -66,6 +69,8 @@ model Course {
   published   Boolean @default(false)
   creators      Trainer[] @relation("CourseCreators")
   content       ProjectContent?
+  sections    CourseSection[]
+  courseProgresses CourseProgress[]
   createdAt    DateTime @default(now())
 }
 
@@ -78,6 +83,7 @@ model ProjectContent {
   quiz        Quiz?     @relation(fields: [quizId], references: [id])
   courseId     String?   @unique
   course      Course?   @relation(fields: [courseId], references: [id])
+  traineeProgresses TraineeProgress[] // back-relation for currentContent
   position    Int
 
   @@unique([projectId, position])
@@ -195,7 +201,7 @@ model Question {
   points    Int          @default(0)
   order     Int          // 0-based position within the section
   data      Json
-
+  responses QuizQuestionResponse[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -209,4 +215,172 @@ enum QuestionType {
   true_false
   long_answer
   content_block
+}
+
+// ─── CourseSection ─────────────────────────────────
+model CourseSection {
+  id          String     @id @default(cuid())
+  courseId    String
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  order       Int
+  questions   CourseQuestion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseId, order])
+  @@index([courseId, order])
+}
+
+// ─── CourseQuestion ────────────────────────────────
+model CourseQuestion {
+  id        String       @id @default(cuid())
+  sectionId String
+  section   CourseSection    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  type      QuestionType
+  question  String
+  points    Int          @default(0)
+  order     Int
+  data      Json
+completions CourseQuestionCompletion[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sectionId, order])
+  @@index([sectionId, order])
+}
+
+// ─── Trainee's overall progress on a project's content ───────────
+model TraineeProgress {
+  id          String   @id @default(uuid())
+  traineeId   String
+  trainee     Trainee  @relation(fields: [traineeId], references: [id])
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+
+  // Which ProjectContent item the trainee is currently on
+  // (i.e., the furthest unlocked content position)
+  currentContentId String?
+  currentContent   ProjectContent? @relation(fields: [currentContentId], references: [id])
+
+  courseProgresses CourseProgress[]
+  quizAttempts     QuizAttempt[]
+
+  startedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([traineeId, projectId])
+  @@index([traineeId, projectId])
+}
+
+// ─── Course Progress ─────────────────────────────────
+// Tracks a trainee's progress through a specific course
+model CourseProgress {
+  id                String           @id @default(uuid())
+  traineeProgressId String
+  traineeProgress   TraineeProgress  @relation(fields: [traineeProgressId], references: [id], onDelete: Cascade)
+  courseId           String
+  course             Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Which section the trainee is currently on (furthest unlocked)
+  currentSectionOrder Int            @default(0)
+
+  status             CourseStatus    @default(IN_PROGRESS)
+  completions        CourseQuestionCompletion[]
+
+  startedAt          DateTime        @default(now())
+  completedAt        DateTime?
+  updatedAt          DateTime        @updatedAt
+
+  @@unique([traineeProgressId, courseId])
+  @@index([traineeProgressId])
+}
+
+enum CourseStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+// ─── Course Question Completion ──────────────────────
+// Only records that a question was answered correctly (no response stored)
+model CourseQuestionCompletion {
+  id               String          @id @default(uuid())
+  courseProgressId  String
+  courseProgress    CourseProgress  @relation(fields: [courseProgressId], references: [id], onDelete: Cascade)
+  courseQuestionId  String
+  courseQuestion    CourseQuestion  @relation(fields: [courseQuestionId], references: [id], onDelete: Cascade)
+
+  // No response field — we only record completion
+  completedAt      DateTime        @default(now())
+
+  @@unique([courseProgressId, courseQuestionId])
+  @@index([courseProgressId])
+}
+
+// ─── Quiz Attempt ────────────────────────────────────
+// One attempt at a quiz by a trainee
+// Update QuizAttempt — add feedback field
+model QuizAttempt {
+  id                String           @id @default(uuid())
+  traineeProgressId String
+  traineeProgress   TraineeProgress  @relation(fields: [traineeProgressId], references: [id], onDelete: Cascade)
+  quizId            String
+  quiz              Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  currentSectionOrder Int            @default(0)
+
+  status            QuizAttemptStatus @default(IN_PROGRESS)
+  responses         QuizQuestionResponse[]
+
+  totalScore        Int?
+  maxScore          Int?
+  passed            Boolean?
+  feedback          String?          // Overall quiz feedback (generated by AI later)
+
+  startedAt         DateTime         @default(now())
+  submittedAt       DateTime?
+  gradedAt          DateTime?        // When grading completed
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([traineeProgressId, quizId])
+  @@index([traineeProgressId])
+}
+
+
+enum QuizAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+}
+
+// ─── Quiz Question Response ──────────────────────────
+// Stores the trainee's actual response to each quiz question (locked after submit)
+model QuizQuestionResponse {
+  id             String                @id @default(uuid())
+  quizAttemptId  String
+  quizAttempt    QuizAttempt           @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
+  questionId     String
+  question       Question              @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  response       Json
+  submitted      Boolean               @default(false)
+
+  pointsAwarded  Int?
+  maxPoints      Int?                  // Store max points for easy reference
+  feedback       String?               // Per-question feedback (AI-generated for long_answer)
+  gradingStatus  ResponseGradingStatus @default(PENDING)
+
+  submittedAt    DateTime              @default(now())
+
+  @@unique([quizAttemptId, questionId])
+  @@index([quizAttemptId])
+}
+
+enum ResponseGradingStatus {
+  PENDING
+  AUTO_GRADED
+  AI_GRADED
+  MANUALLY_GRADED
 }

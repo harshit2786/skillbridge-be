@@ -14,8 +14,8 @@ import { isAdmin } from "../middlewares/isAdmin.js";
 const router = Router({ mergeParams: true });
 
 // Any authenticated member
-router.get("/", auth, getQuizzesByProject);
-router.get("/:quizId", auth, getQuizById);
+router.get("/", auth, trainerOnly, getQuizzesByProject);
+router.get("/:quizId", auth, trainerOnly, getQuizById);
 
 // Admin only
 router.post("/", auth, trainerOnly, isAdmin, createQuiz);

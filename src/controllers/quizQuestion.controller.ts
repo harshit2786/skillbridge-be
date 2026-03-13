@@ -112,14 +112,15 @@ export const getQuestions = async (
       orderBy: { order: "asc" },
     });
 
-    if (role === "trainee") {
-      const sanitized = questions.map((q) => ({
-        ...q,
-        data: stripAnswers(q.type, q.data as any),
-      }));
-      res.status(200).json({ questions: sanitized });
-      return;
-    }
+    // Removed as this route is now trainer-only. Instead we will be adding a separate trainee controller.
+    // if (role === "trainee") {
+    //   const sanitized = questions.map((q) => ({
+    //     ...q,
+    //     data: stripAnswers(q.type, q.data as any),
+    //   }));
+    //   res.status(200).json({ questions: sanitized });
+    //   return;
+    // }
 
     res.status(200).json({ questions });
   } catch (error) {
@@ -163,15 +164,16 @@ export const getQuestionById = async (
       return;
     }
 
-    if (role === "trainee") {
-      res.status(200).json({
-        question: {
-          ...question,
-          data: stripAnswers(question.type, question.data as any),
-        },
-      });
-      return;
-    }
+    // Removed as this route is now trainer-only. Instead we will be adding a separate trainee controller.
+    // if (role === "trainee") {
+    //   res.status(200).json({
+    //     question: {
+    //       ...question,
+    //       data: stripAnswers(question.type, question.data as any),
+    //     },
+    //   });
+    //   return;
+    // }
 
     res.status(200).json({ question });
   } catch (error) {

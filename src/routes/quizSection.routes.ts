@@ -6,14 +6,14 @@ import {
   updateSection,
   deleteSection,
   reorderSections,
-} from "../controllers/section.controller.js";
+} from "../controllers/quizSection.controller.js";
 import { auth, trainerOnly } from "../middlewares/auth.js";
 import { isQuizCreator } from "../middlewares/isQuizCreator.js";
 
 const router = Router({ mergeParams: true });
 
 // Any authenticated member can view
-router.get("/", auth, getSections);
+router.get("/", auth, trainerOnly, getSections);
 router.get("/:sectionId", auth, trainerOnly, isQuizCreator, getSectionById);
 
 // Quiz creators / admin only

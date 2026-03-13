@@ -17,160 +17,142 @@ async function main() {
 
   const password = await bcrypt.hash("password123", 10);
 
+  // TRAINERS
   const trainer1 = await prisma.trainer.create({
-    data: { email: "john@example.com", name: "John Doe", password },
+    data: {
+      email: "harshit.kumar.singh@nanoheal.com",
+      name: "Harshit Kumar Singh",
+      password,
+    },
   });
 
   const trainer2 = await prisma.trainer.create({
-    data: { email: "jane@example.com", name: "Jane Smith", password },
+    data: {
+      email: "himanshu.narware@nanoheal.com",
+      name: "Himanshu Narware",
+      password,
+    },
   });
 
   const trainer3 = await prisma.trainer.create({
-    data: { email: "bob@example.com", name: "Bob Wilson", password },
+    data: {
+      email: "manan.manchanda@nanoheal.com",
+      name: "Manan Manchanda",
+      password,
+    },
+  });
+
+  const trainer4 = await prisma.trainer.create({
+    data: {
+      email: "sreevatsan.s@unifie.io",
+      name: "Sreevatsan",
+      password,
+    },
   });
 
   console.log("✅ Trainers created");
 
+  // TRAINEES
   const trainee1 = await prisma.trainee.create({
-    data: { phone: "9876543210", name: "Alice Brown" },
+    data: { phone: "9119109287", name: "Harshit Kumar Singh" },
   });
 
   const trainee2 = await prisma.trainee.create({
-    data: { phone: "9876543211", name: "Charlie Davis" },
+    data: { phone: "7772873295", name: "Himanshu Narware" },
   });
 
   const trainee3 = await prisma.trainee.create({
-    data: { phone: "9876543212", name: "Eve Miller" },
+    data: { phone: "7424960882", name: "Manan Manchanda" },
+  });
+
+  const trainee4 = await prisma.trainee.create({
+    data: { phone: "9606571189", name: "Sreevatsan" },
   });
 
   console.log("✅ Trainees created");
 
+  const allTrainers = [
+    { id: trainer1.id },
+    { id: trainer2.id },
+    { id: trainer3.id },
+    { id: trainer4.id },
+  ];
+
+  const allTrainees = [
+    { id: trainee1.id },
+    { id: trainee2.id },
+    { id: trainee3.id },
+    { id: trainee4.id },
+  ];
+
+  // PROJECTS
   const project1 = await prisma.project.create({
     data: {
-      name: "Full Stack Development",
-      description: "Learn full stack web development",
+      name: "React JS",
+      description:
+        "Learn modern frontend development using React, hooks, component architecture, and state management.",
       adminId: trainer1.id,
-      trainers: {
-        connect: [{ id: trainer1.id }, { id: trainer2.id }],
-      },
-      trainees: {
-        connect: [{ id: trainee1.id }, { id: trainee2.id }],
-      },
+      trainers: { connect: allTrainers },
+      trainees: { connect: allTrainees },
     },
   });
 
   const project2 = await prisma.project.create({
     data: {
-      name: "Data Science Bootcamp",
-      description: "Master data science fundamentals",
+      name: "Node JS",
+      description:
+        "Build scalable backend services using Node.js, Express, REST APIs, and authentication systems.",
       adminId: trainer2.id,
-      trainers: {
-        connect: [{ id: trainer2.id }, { id: trainer3.id }],
-      },
-      trainees: {
-        connect: [{ id: trainee2.id }, { id: trainee3.id }],
-      },
+      trainers: { connect: allTrainers },
+      trainees: { connect: allTrainees },
+    },
+  });
+
+  const project3 = await prisma.project.create({
+    data: {
+      name: "Postgres",
+      description:
+        "Master relational databases with PostgreSQL including schema design, indexing, and query optimization.",
+      adminId: trainer3.id,
+      trainers: { connect: allTrainers },
+      trainees: { connect: allTrainees },
+    },
+  });
+
+  const project4 = await prisma.project.create({
+    data: {
+      name: "NextJs",
+      description:
+        "Learn full-stack React development using Next.js including SSR, routing, APIs, and performance optimization.",
+      adminId: trainer4.id,
+      trainers: { connect: allTrainers },
+      trainees: { connect: allTrainees },
     },
   });
 
   console.log("✅ Projects created");
 
-  // Project 1 content: Course1 -> Quiz1 -> Course2 -> Quiz2
-  const course1 = await prisma.course.create({
-    data: {
-      name: "Node.js Fundamentals",
-      description: "Learn Node.js from scratch",
-      projectId: project1.id,
-      published: true,
-      creators: { connect: [{ id: trainer1.id }] },
-    },
-  });
-
-  const quiz1 = await prisma.quiz.create({
-    data: {
-      name: "JavaScript Basics Quiz",
-      description: "Test your JS knowledge",
-      projectId: project1.id,
-      published: true,
-      creators: { connect: [{ id: trainer1.id }, { id: trainer2.id }] },
-    },
-  });
-
-  const course2 = await prisma.course.create({
-    data: {
-      name: "Express.js Deep Dive",
-      description: "Master Express.js",
-      projectId: project1.id,
-      published: false,
-      creators: { connect: [{ id: trainer2.id }] },
-    },
-  });
-
-  const quiz2 = await prisma.quiz.create({
-    data: {
-      name: "React Quiz",
-      description: "Test your React knowledge",
-      projectId: project1.id,
-      published: false,
-      creators: { connect: [{ id: trainer2.id }] },
-    },
-  });
-
-  // Create ordered content for project 1
-  await prisma.projectContent.createMany({
-    data: [
-      { projectId: project1.id, type: "COURSE", courseId: course1.id, position: 1 },
-      { projectId: project1.id, type: "QUIZ", quizId: quiz1.id, position: 2 },
-      { projectId: project1.id, type: "COURSE", courseId: course2.id, position: 3 },
-      { projectId: project1.id, type: "QUIZ", quizId: quiz2.id, position: 4 },
-    ],
-  });
-
-  // Project 2 content
-  const course3 = await prisma.course.create({
-    data: {
-      name: "Python for Data Science",
-      description: "Python basics for data analysis",
-      projectId: project2.id,
-      published: true,
-      creators: { connect: [{ id: trainer3.id }] },
-    },
-  });
-
-  const quiz3 = await prisma.quiz.create({
-    data: {
-      name: "Python Basics Quiz",
-      description: "Test your Python knowledge",
-      projectId: project2.id,
-      published: true,
-      creators: { connect: [{ id: trainer2.id }] },
-    },
-  });
-
-  await prisma.projectContent.createMany({
-    data: [
-      { projectId: project2.id, type: "COURSE", courseId: course3.id, position: 1 },
-      { projectId: project2.id, type: "QUIZ", quizId: quiz3.id, position: 2 },
-    ],
-  });
-
-  console.log("✅ Courses, Quizzes & Content Order created");
-
   console.log("\n📋 Seed Summary:");
   console.log("─────────────────────────────────────────");
+
   console.log("TRAINERS (password: password123):");
-  console.log(`  ${trainer1.name} → ${trainer1.email}`);
-  console.log(`  ${trainer2.name} → ${trainer2.email}`);
-  console.log(`  ${trainer3.name} → ${trainer3.email}`);
-  console.log("\nTRAINEES (use OTP flow):");
-  console.log(`  ${trainee1.name} → ${trainee1.phone}`);
-  console.log(`  ${trainee2.name} → ${trainee2.phone}`);
-  console.log(`  ${trainee3.name} → ${trainee3.phone}`);
+  console.log(`${trainer1.name} → ${trainer1.email}`);
+  console.log(`${trainer2.name} → ${trainer2.email}`);
+  console.log(`${trainer3.name} → ${trainer3.email}`);
+  console.log(`${trainer4.name} → ${trainer4.email}`);
+
+  console.log("\nTRAINEES:");
+  console.log(`${trainee1.name} → ${trainee1.phone}`);
+  console.log(`${trainee2.name} → ${trainee2.phone}`);
+  console.log(`${trainee3.name} → ${trainee3.phone}`);
+  console.log(`${trainee4.name} → ${trainee4.phone}`);
+
   console.log("\nPROJECTS:");
-  console.log(`  ${project1.name} (Admin: ${trainer1.name})`);
-  console.log(`    Order: ${course1.name} → ${quiz1.name} → ${course2.name} → ${quiz2.name}`);
-  console.log(`  ${project2.name} (Admin: ${trainer2.name})`);
-  console.log(`    Order: ${course3.name} → ${quiz3.name}`);
+  console.log(`${project1.name} (Admin: ${trainer1.name})`);
+  console.log(`${project2.name} (Admin: ${trainer2.name})`);
+  console.log(`${project3.name} (Admin: ${trainer3.name})`);
+  console.log(`${project4.name} (Admin: ${trainer4.name})`);
+
   console.log("─────────────────────────────────────────");
   console.log("🌱 Seeding complete!");
 }

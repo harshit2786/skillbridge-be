@@ -13,8 +13,8 @@ import { isAdmin } from "../middlewares/isAdmin.js";
 const router = Router({ mergeParams: true });
 
 // Any authenticated member
-router.get("/", auth, getCoursesByProject);
-router.get("/:courseId", auth, getCourseById);
+router.get("/", auth,trainerOnly, getCoursesByProject);
+router.get("/:courseId", auth, trainerOnly, getCourseById);
 
 // Admin only
 router.post("/", auth, trainerOnly, isAdmin, createCourse);
