@@ -16,6 +16,8 @@ import courseSectionRoutes from "./routes/courseSection.routes.js";
 import courseQuestionRoutes from "./routes/courseQuestion.routes.js";
 import learnRoutes from "./routes/learn.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
+import webinarRoutes from "./routes/webinar.routes.js";
+import guestRoutes from "./routes/guest.routes.js";
 
 dotenv.config();
 
@@ -32,6 +34,7 @@ app.get("/health", (req, res) => {
 // Routes
 app.use("/api/trainer", trainerAuthRoutes);
 app.use("/api/trainee", traineeAuthRoutes);
+app.use("/api/guest", guestRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/projects/:projectId/quizzes", quizRoutes);
 app.use("/api/projects/:projectId/courses", courseRoutes);
@@ -53,6 +56,7 @@ app.use(
 );
 app.use("/api/projects/:projectId/learn", learnRoutes);
 app.use("/api/projects/:projectId/ai", aiRoutes);
+app.use("/api/projects/:projectId/webinars", webinarRoutes);
 app.use(errorHandler);
 
 app.listen(PORT, () => {

@@ -17,6 +17,7 @@ model Trainer {
   quiz_creators     Quiz[] @relation("QuizCreators")
   course_creators   Course[] @relation("CourseCreators")
   resources     Resource[]
+  hosted_webinars   Webinar[] @relation("WebinarHost")
 }
 
 model Trainee {
@@ -26,6 +27,7 @@ model Trainee {
   chats       Chat[]
   progresses   TraineeProgress[]
   projects_trainee   Project[] @relation("TraineeProjects")
+  webinar_registrations WebinarRegistration[]
 }
 
 model Project {
@@ -42,6 +44,7 @@ model Project {
   chats       Chat[]
   traineeProgresses TraineeProgress[]
   contents     ProjectContent[]
+  webinars     Webinar[]
   createdAt    DateTime @default(now())
 }
 
@@ -383,4 +386,39 @@ enum ResponseGradingStatus {
   AUTO_GRADED
   AI_GRADED
   MANUALLY_GRADED
+}
+
+// ─── Webinar ──────────────────────────────────────────
+model Webinar {
+  id            String                @id @default(uuid())
+  title         String
+  description   String?
+  scheduledAt   DateTime              // the date + time of the webinar
+  duration      Int                   @default(60) // duration in minutes
+  zoomMeetingId String                // Zoom meeting ID for reference
+  zoomJoinUrl   String                // participants use this to join
+  zoomStartUrl  String                // host uses this to start the meeting
+  projectId     String
+  project       Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  hostTrainerId String
+  hostTrainer   Trainer               @relation("WebinarHost", fields: [hostTrainerId], references: [id])
+  registrations WebinarRegistration[]
+  createdAt     DateTime              @default(now())
+
+  @@index([projectId])
+  @@index([scheduledAt])
+}
+
+// ─── WebinarRegistration ──────────────────────────────
+model WebinarRegistration {
+  id        String   @id @default(uuid())
+  webinarId String
+  webinar   Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  traineeId String
+  trainee   Trainee  @relation(fields: [traineeId], references: [id])
+  email     String   // email the trainee registered with (used to send the invite)
+  createdAt DateTime @default(now())
+
+  @@unique([webinarId, traineeId])  // a trainee can only register once per webinar
+  @@index([webinarId])
 }
