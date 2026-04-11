@@ -252,6 +252,45 @@ export const removeTrainerFromProject = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+// PATCH /api/projects/:projectId
+export const updateProject = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { name, description } = req.body;
+        if (typeof projectId !== "string") {
+            res.status(400).json({ message: "Project ID is required" });
+            return;
+        }
+        if (!name || typeof name !== "string" || name.trim() === "") {
+            res.status(400).json({ message: "Project name is required" });
+            return;
+        }
+        const project = await prisma.project.update({
+            where: { id: projectId },
+            data: { name: name.trim(), description },
+            select: { id: true, name: true, description: true, adminId: true },
+        });
+        res.status(200).json({ message: "Project updated successfully", project });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+// DELETE /api/projects/:projectId
+export const deleteProject = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        if (typeof projectId !== "string") {
+            res.status(400).json({ message: "Project ID is required" });
+            return;
+        }
+        await prisma.project.delete({ where: { id: projectId } });
+        res.status(200).json({ message: "Project deleted successfully" });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 // DELETE /api/projects/:projectId/trainees/:traineeId
 export const removeTraineeFromProject = async (req, res) => {
     try {

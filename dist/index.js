@@ -15,6 +15,7 @@ import questionRoutes from "./routes/quizQuestion.routes.js";
 import courseSectionRoutes from "./routes/courseSection.routes.js";
 import courseQuestionRoutes from "./routes/courseQuestion.routes.js";
 import learnRoutes from "./routes/learn.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,6 +38,7 @@ app.use("/api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions"
 app.use("/api/projects/:projectId/courses/:courseId/sections", courseSectionRoutes);
 app.use("/api/projects/:projectId/courses/:courseId/sections/:sectionId/questions", courseQuestionRoutes);
 app.use("/api/projects/:projectId/learn", learnRoutes);
+app.use("/api/projects/:projectId/ai", aiRoutes);
 app.use(errorHandler);
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

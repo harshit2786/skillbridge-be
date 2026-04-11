@@ -3,6 +3,19 @@ import prisma from "../lib/prisma.js";
 import { generateToken } from "../utils/generateToken.js";
 import { createAndSendOtp, verifyOtp } from "../services/otp.service.js";
 
+// GET /api/trainee/list
+export const listAllTrainees = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const trainees = await prisma.trainee.findMany({
+      select: { id: true, name: true, phone: true },
+      orderBy: { name: "asc" },
+    });
+    res.status(200).json({ trainees });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 // POST /api/trainee/send-otp
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   try {

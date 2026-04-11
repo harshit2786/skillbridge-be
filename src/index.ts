@@ -15,6 +15,7 @@ import questionRoutes from "./routes/quizQuestion.routes.js";
 import courseSectionRoutes from "./routes/courseSection.routes.js";
 import courseQuestionRoutes from "./routes/courseQuestion.routes.js";
 import learnRoutes from "./routes/learn.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use(
   courseQuestionRoutes,
 );
 app.use("/api/projects/:projectId/learn", learnRoutes);
+app.use("/api/projects/:projectId/ai", aiRoutes);
 app.use(errorHandler);
 
 app.listen(PORT, () => {

@@ -3,6 +3,8 @@ import {
   createProject,
   getMyProjects,
   getProjectById,
+  updateProject,
+  deleteProject,
   addTrainersToProject,
   addTraineesToProject,
   removeTrainerFromProject,
@@ -21,6 +23,8 @@ router.get("/:projectId", auth, getProjectById);
 router.post("/", auth, trainerOnly, createProject);
 
 // Admin only
+router.patch("/:projectId", auth, trainerOnly, isAdmin, updateProject);
+router.delete("/:projectId", auth, trainerOnly, isAdmin, deleteProject);
 router.post("/:projectId/trainers", auth, trainerOnly, isAdmin, addTrainersToProject);
 router.post("/:projectId/trainees", auth, trainerOnly, isAdmin, addTraineesToProject);
 router.delete("/:projectId/trainers/:trainerId", auth, trainerOnly, isAdmin, removeTrainerFromProject);

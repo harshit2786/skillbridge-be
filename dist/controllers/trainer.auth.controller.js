@@ -35,6 +35,19 @@ export const trainerLogin = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+// GET /api/trainer/list
+export const listAllTrainers = async (req, res) => {
+    try {
+        const trainers = await prisma.trainer.findMany({
+            select: { id: true, name: true, email: true },
+            orderBy: { name: "asc" },
+        });
+        res.status(200).json({ trainers });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 export const getTrainerProfile = async (req, res) => {
     try {
         const userId = req.userId;
