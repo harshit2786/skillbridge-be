@@ -370,3 +370,163 @@ export const toggleQuizPublish = async (
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// GET /api/projects/:projectId/quizzes/:quizId/attempts
+export const getQuizAttempts = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { projectId, quizId } = req.params;
+
+    if (typeof projectId !== "string" || typeof quizId !== "string") {
+      res.status(400).json({ message: "Project ID and Quiz ID are required" });
+      return;
+    }
+
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId, projectId },
+      select: { id: true, passingPercent: true },
+    });
+
+    if (!quiz) {
+      res.status(404).json({ message: "Quiz not found" });
+      return;
+    }
+
+    const attempts = await prisma.quizAttempt.findMany({
+      where: {
+        quizId,
+        status: { in: ["SUBMITTED", "GRADED"] },
+      },
+      include: {
+        traineeProgress: {
+          include: {
+            trainee: {
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { submittedAt: "desc" },
+    });
+
+    const results = attempts.map((attempt) => ({
+      attemptId: attempt.id,
+      trainee: attempt.traineeProgress.trainee,
+      status: attempt.status,
+      totalScore: attempt.totalScore,
+      maxScore: attempt.maxScore,
+      passed: attempt.passed,
+      submittedAt: attempt.submittedAt,
+      gradedAt: attempt.gradedAt,
+      scorePercent:
+        attempt.maxScore && attempt.maxScore > 0
+          ? Math.round(
+              ((attempt.totalScore || 0) / attempt.maxScore) * 10000
+            ) / 100
+          : null,
+    }));
+
+    res.status(200).json({
+      passingPercent: quiz.passingPercent,
+      attempts: results,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// POST /api/projects/:projectId/quizzes/:quizId/attempts/:attemptId/reset
+export const resetQuizAttempt = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { projectId, quizId, attemptId } = req.params;
+
+    if (
+      typeof projectId !== "string" ||
+      typeof quizId !== "string" ||
+      typeof attemptId !== "string"
+    ) {
+      res.status(400).json({ message: "All IDs are required" });
+      return;
+    }
+
+    const attempt = await prisma.quizAttempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        traineeProgress: true,
+      },
+    });
+
+    if (!attempt) {
+      res.status(404).json({ message: "Attempt not found" });
+      return;
+    }
+
+    if (attempt.quizId !== quizId) {
+      res.status(400).json({ message: "Attempt does not belong to this quiz" });
+      return;
+    }
+
+    // Only allow reset for graded + failed attempts
+    if (attempt.status !== "GRADED") {
+      res.status(400).json({
+        message: "Can only reset graded attempts",
+      });
+      return;
+    }
+
+    if (attempt.passed) {
+      res.status(400).json({
+        message: "Cannot reset a passed attempt",
+      });
+      return;
+    }
+
+    const traineeProgressId = attempt.traineeProgressId;
+
+    // Find the ProjectContent for this quiz
+    const quizContent = await prisma.projectContent.findFirst({
+      where: { quizId, projectId },
+    });
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete all responses for this attempt (cascade should handle this,
+      //    but being explicit)
+      await tx.quizQuestionResponse.deleteMany({
+        where: { quizAttemptId: attemptId },
+      });
+
+      // 2. Delete the attempt
+      await tx.quizAttempt.delete({
+        where: { id: attemptId },
+      });
+
+      // 3. Reset traineeProgress.currentContentId back to this quiz's content
+      //    so the trainee lands on this quiz again
+      if (quizContent) {
+        await tx.traineeProgress.update({
+          where: { id: traineeProgressId },
+          data: {
+            currentContentId: quizContent.id,
+          },
+        });
+      }
+    });
+
+    res.status(200).json({
+      message: "Quiz attempt reset successfully. The trainee can retake the quiz.",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

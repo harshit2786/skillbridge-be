@@ -7,9 +7,18 @@ async function main() {
   console.log("🌱 Seeding database...");
 
   // Clean existing data (order matters for foreign keys)
+  await prisma.source.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.chat.deleteMany();
+  await prisma.quizQuestionResponse.deleteMany();
+  await prisma.quizAttempt.deleteMany();
+  await prisma.courseQuestionCompletion.deleteMany();
+  await prisma.courseProgress.deleteMany();
+  await prisma.traineeProgress.deleteMany();
   await prisma.projectContent.deleteMany();
   await prisma.quiz.deleteMany();
   await prisma.course.deleteMany();
+  await prisma.resource.deleteMany();
   await prisma.project.deleteMany();
   await prisma.trainer.deleteMany();
   await prisma.trainee.deleteMany();

@@ -5,4 +5,6 @@ export declare const getQuizById: (req: Request, res: Response) => Promise<void>
 export declare const addCreatorsToQuiz: (req: Request, res: Response) => Promise<void>;
 export declare const removeCreatorFromQuiz: (req: Request, res: Response) => Promise<void>;
 export declare const toggleQuizPublish: (req: Request, res: Response) => Promise<void>;
+export declare const getQuizAttempts: (req: Request, res: Response) => Promise<void>;
+export declare const resetQuizAttempt: (req: Request, res: Response) => Promise<void>;
 //# sourceMappingURL=quiz.controller.d.ts.map
