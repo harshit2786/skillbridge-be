@@ -15,24 +15,15 @@ services:
         value: production
       - key: PORT
         value: 3000
-      # Database - from Supabase
+      # Database - from Supabase (set manually in Render dashboard)
       - key: DATABASE_URL
-        fromService:
-          name: lms-be-api
-          type: web
-          envVarKey: DATABASE_URL
-      # Redis - from Upstash
+        sync: false
+      # Redis - from Upstash (set manually in Render dashboard)
       - key: REDIS_URL
-        fromService:
-          name: lms-be-api
-          type: web
-          envVarKey: REDIS_URL
-      # Qdrant - from Qdrant Cloud
+        sync: false
+      # Qdrant - from Qdrant Cloud (set manually in Render dashboard)
       - key: QDRANT_URL
-        fromService:
-          name: lms-be-api
-          type: web
-          envVarKey: QDRANT_URL
+        sync: false
       # OpenAI API Key
       - key: OPENAI_API_KEY
         sync: false  # Secret - must be set manually
