@@ -18,21 +18,23 @@ function getBucket(): ReturnType<Storage["bucket"]> {
     const bucketName = process.env.GCS_BUCKET_NAME;
     if (!bucketName) throw new Error("GCS_BUCKET_NAME environment variable is required");
 
-    const storageOptions: ConstructorParameters<typeof Storage>[0] = {
-      projectId: process.env.GCS_PROJECT_ID,
-    };
-
+    let storage: Storage;
     if (process.env.GCS_KEY_BASE64) {
       // Cloud deployment: credentials supplied as base64-encoded JSON
-      storageOptions.credentials = JSON.parse(
-        Buffer.from(process.env.GCS_KEY_BASE64, "base64").toString(),
-      );
-    } else if (process.env.GCS_KEY_FILE) {
+      storage = new Storage({
+        ...(process.env.GCS_PROJECT_ID && { projectId: process.env.GCS_PROJECT_ID }),
+        credentials: JSON.parse(
+          Buffer.from(process.env.GCS_KEY_BASE64, "base64").toString(),
+        ) as object,
+      });
+    } else {
       // Local dev: credentials loaded from file
-      storageOptions.keyFilename = process.env.GCS_KEY_FILE;
+      storage = new Storage({
+        ...(process.env.GCS_PROJECT_ID && { projectId: process.env.GCS_PROJECT_ID }),
+        ...(process.env.GCS_KEY_FILE && { keyFilename: process.env.GCS_KEY_FILE }),
+      });
     }
 
-    const storage = new Storage(storageOptions);
     _bucket = storage.bucket(bucketName);
   }
   return _bucket;
