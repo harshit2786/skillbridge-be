@@ -16,6 +16,9 @@ COPY src ./src
 COPY prisma ./prisma
 
 # Generate Prisma client, then compile TypeScript
+# DATABASE_URL is required by Prisma schema validation at build time.
+# This is a placeholder — the real value is injected at runtime.
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 RUN npx prisma generate
 RUN npx tsc -b
 
