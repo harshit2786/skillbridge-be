@@ -1,9 +1,10 @@
 import { Queue } from "bullmq";
 export declare const redisConnection: {
+    maxRetriesPerRequest: null;
+    tls?: {};
+    password?: string;
     host: string;
     port: number;
-    password: string | undefined;
-    maxRetriesPerRequest: null;
 };
 export declare const resourceQueue: Queue<any, any, string, any, any, string>;
 export interface ResourceJobData {

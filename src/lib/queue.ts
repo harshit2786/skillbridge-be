@@ -1,12 +1,14 @@
 import { Queue } from "bullmq";
 
 const redisUrl = new URL(process.env.REDIS_URL || "redis://localhost:6379");
+const isTLS = redisUrl.protocol === "rediss:";
 
 // Shared Redis connection config
 export const redisConnection = {
   host: redisUrl.hostname,
   port: Number(redisUrl.port) || 6379,
-  password: redisUrl.password || undefined,
+  ...(redisUrl.password && { password: decodeURIComponent(redisUrl.password) }),
+  ...(isTLS && { tls: {} }),
   maxRetriesPerRequest: null,
 };
 
