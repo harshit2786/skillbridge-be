@@ -1,0 +1,157 @@
+# Multi-service deployment configuration for Render.com
+# This file defines the API server, background workers, and builds
+
+services:
+  # ─── Main API Server (Web Service) ───────────────────────────────────────
+  - type: web
+    name: lms-be-api
+    env: node
+    buildCommand: npm ci && npx prisma generate && npx tsc -b
+    startCommand: node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # Database - from Supabase
+      - key: DATABASE_URL
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: DATABASE_URL
+      # Redis - from Upstash
+      - key: REDIS_URL
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: REDIS_URL
+      # Qdrant - from Qdrant Cloud
+      - key: QDRANT_URL
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: QDRANT_URL
+      # OpenAI API Key
+      - key: OPENAI_API_KEY
+        sync: false  # Secret - must be set manually
+      # JWT Secret
+      - key: JWT_SECRET
+        sync: false  # Secret - generate a strong random key
+      # Twilio (optional)
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      # GCS credentials
+      - key: GCS_BUCKET_NAME
+        sync: false
+      - key: GCS_PROJECT_ID
+        sync: false
+      - key: GCS_KEY_FILE
+        value: /etc/secrets/gcs-key.json
+    disk:
+      name: gcs-key
+      mountPath: /etc/secrets
+      sizeGB: 1
+
+  # ─── Resource Processing Worker ──────────────────────────────────────────
+  - type: worker
+    name: lms-be-worker
+    env: node
+    buildCommand: npm ci && npx prisma generate && npx tsc -b
+    startCommand: node dist/worker/resourceWorker.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Inherit environment variables from API service
+      - key: DATABASE_URL
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: DATABASE_URL
+      - key: REDIS_URL
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: REDIS_URL
+      - key: QDRANT_URL
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: QDRANT_URL
+      - key: OPENAI_API_KEY
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: OPENAI_API_KEY
+      - key: GCS_BUCKET_NAME
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: GCS_BUCKET_NAME
+      - key: GCS_PROJECT_ID
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: GCS_PROJECT_ID
+      - key: GCS_KEY_FILE
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: GCS_KEY_FILE
+    disk:
+      name: gcs-key-worker
+      mountPath: /etc/secrets
+      sizeGB: 1
+
+  # ─── Quiz Grading Worker ───────────────────────────────────────────────
+  - type: worker
+    name: lms-be-grader
+    env: node
+    buildCommand: npm ci && npx prisma generate && npx tsc -b
+    startCommand: node dist/worker/quizGradingWorker.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Inherit environment variables from API service
+      - key: DATABASE_URL
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: DATABASE_URL
+      - key: REDIS_URL
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: REDIS_URL
+      - key: QDRANT_URL
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: QDRANT_URL
+      - key: OPENAI_API_KEY
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: OPENAI_API_KEY
+      - key: GCS_BUCKET_NAME
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: GCS_BUCKET_NAME
+      - key: GCS_PROJECT_ID
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: GCS_PROJECT_ID
+      - key: GCS_KEY_FILE
+        fromService:
+          name: lms-be-api
+          type: web
+          envVarKey: GCS_KEY_FILE
+    disk:
+      name: gcs-key-grader
+      mountPath: /etc/secrets
+      sizeGB: 1
