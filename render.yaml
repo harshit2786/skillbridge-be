@@ -8,6 +8,8 @@ services:
     env: node
     buildCommand: npm ci && npx prisma generate && npx tsc -b
     startCommand: node dist/index.js
+    # Run migrations and seeding before each deploy (seeding is idempotent - checks if already seeded)
+    preDeployCommand: npx prisma migrate deploy && npx tsx prisma/seed.ts
     envVars:
       - key: NODE_ENV
         value: production

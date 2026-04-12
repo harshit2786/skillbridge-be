@@ -85,12 +85,13 @@ TWILIO_PHONE_NUMBER=
 
 ### 5. Render Deployment
 **Method A: Blueprint (Recommended)**
-- [ ] Created `render.yaml` file in project root
+- [ ] Created `render.yaml` file in project root (includes `preDeployCommand` for migrations)
 - [ ] Pushed changes to GitHub
 - [ ] Connected repository to Render
 - [ ] Uploaded `gcs-key.json` to persistent disk
 - [ ] Set environment variables in Render dashboard
 - [ ] Deployed successfully
+- [ ] Pre-deploy command executed (check logs for "🌱 Seeding database...")
 
 **Method B: Manual**
 - [ ] Created API web service
@@ -99,19 +100,35 @@ TWILIO_PHONE_NUMBER=
 - [ ] Set environment variables for all three services
 - [ ] All services show "Live" status
 
-### 6. Database Migration & Seeding
+### 6. Database Migration & Seeding (AUTOMATIC - Verify in Logs)
+**This happens automatically via `preDeployCommand` in `render.yaml`**
+- [ ] Pre-deploy command completed without errors
+- [ ] Logs show "🌱 Seeding database..."
+- [ ] Logs show "✅ Demo accounts created"
+- [ ] Logs show "✅ Trainers created" (5 total)
+- [ ] Logs show "✅ Projects created" (5 total)
+- [ ] Logs show "🌱 Seeding complete!"
+
+**Manual Migration (Only if Automatic Fails)**
 - [ ] Opened Render shell for API service
-- [ ] Ran: `npx prisma migrate deploy`
-- [ ] Ran: `npm run prisma:seed`
+- [ ] Ran: `npm run db:setup:production`
+- [ ] Or ran: `./scripts/db-migrate-and-seed.sh`
 - [ ] No errors in output
 
 ### 7. Post-Deployment Verification
 
 #### Check Logs
 - [ ] API service logs show "Server running"
+- [ ] API service logs show migration/seeding completed
 - [ ] Worker service logs show "Resource worker started"
 - [ ] Grader service logs show "Quiz grading worker started"
 - [ ] No connection errors in any service
+
+#### Verify Database Seeding
+- [ ] Trainer count > 0: `npx prisma trainer count` (should be 5+)
+- [ ] Project count > 0: `npx prisma project count` (should be 5+)
+- [ ] Course count > 0: `npx prisma course count` (should be 2+)
+- [ ] Quiz count > 0: `npx prisma quiz count` (should be 2+)
 
 #### Test API Endpoints
 - [ ] Health check: `GET /api/health` returns 200
@@ -150,23 +167,35 @@ If deployment fails, check:
    - [ ] No extra spaces or quotes
    - [ ] Sensitive values marked as secrets in Render
 
-2. **Service Dependencies**
+2. **Migration & Seeding (Automatic)**
+   - [ ] Pre-deploy command appears in deploy logs
+   - [ ] No "Cannot find module 'prisma/seed.ts'" error
+   - [ ] Database connection successful during pre-deploy
+   - [ ] Seed script completed (check for "🌱 Seeding complete!")
+
+3. **Manual Migration (If Automatic Failed)**
+   - [ ] Attempted manual migration via `npm run db:setup:production`
+   - [ ] Checked migration status: `npx prisma migrate status`
+   - [ ] Verified seeding with database count checks
+   - [ ] No duplicate data created (seed script is idempotent)
+
+4. **Service Dependencies**
    - [ ] Workers start after API service
    - [ ] All services can reach Supabase
    - [ ] All services can reach Upstash
    - [ ] All services can reach Qdrant
 
-3. **Database**
-   - [ ] Migration ran successfully
-   - [ ] Database has tables and seed data
+5. **Database**
+   - [ ] Migration ran successfully (tables exist)
+   - [ ] Database has seed data (trainers, projects, etc.)
    - [ ] Connection string is correct
 
-4. **GCS Credentials**
+6. **GCS Credentials**
    - [ ] File uploaded to Render persistent disk
    - [ ] Path matches `GCS_KEY_FILE` value
    - [ ] Service account has proper permissions
 
-5. **External APIs**
+7. **External APIs**
    - [ ] OpenAI API key is valid
    - [ ] OpenAI account has available credits
    - [ ] Twilio credentials are correct (if used)

@@ -193,27 +193,108 @@ If Blueprint doesn't work, create services manually:
 
 ---
 
-## Step 6: Initial Database Setup
+## Step 6: Database Migration & Seeding (Automatic)
 
-After deployment, you need to run migrations and seeding:
+**Good news!** This step is now **automatic** with the updated `render.yaml`.
+
+The `preDeployCommand` in the API service configuration runs before each deployment:
+```bash
+npx prisma migrate deploy && npx tsx prisma/seed.ts
+```
+
+### How It Works
+
+- **Migrations** (`prisma migrate deploy`): Applies pending migrations to your database
+- **Seeding** (`npx tsx prisma/seed.ts`): Seeds the database with demo data. **Note: The seed script is idempotent** - it checks if data already exists and skips if already seeded.
+
+### What Happens During Deployment
+
+1. Render builds your application (runs `buildCommand`)
+2. Before starting the service, Render runs `preDeployCommand`
+3. Migrations are applied to Supabase PostgreSQL
+4. Database is seeded with demo accounts and sample data
+5. API service starts
+6. Worker services start
+
+### Verification
+
+After deployment completes (all services show "Live"):
+
+Check the API service logs:
+- Look for "🌱 Seeding database..."
+- Look for "✅ Demo accounts created"
+- Look for "✅ Trainers created"
+- Look for "🌱 Seeding complete!"
+
+### Manual Migration (If Automatic Fails)
+
+If the automatic migration fails or you want to run it manually:
 
 1. **Open Render Shell**
-   - Go to your API service dashboard
-   - Click "Shell" tab
-
-2. **Run Migrations**
    ```bash
-   npx prisma migrate deploy
+   # Go to your API service dashboard → "Shell" tab
    ```
 
-3. **Run Seed Script**
+2. **Run Migration & Seeding Script**
    ```bash
-   npm run prisma:seed
-   # or
-   npx tsx prisma/seed.ts
+   npm run db:setup:production
    ```
 
-   **Note**: If `tsx` isn't available in production, you might need to install dev dependencies temporarily or run migration locally pointing to the cloud DB.
+   Or run the shell script:
+   ```bash
+   ./scripts/db-migrate-and-seed.sh
+   ```
+
+3. **Verify Seeding (Optional)**
+   ```bash
+   ./scripts/db-migrate-and-seed.sh --verify
+   ```
+
+### What Gets Seeded?
+
+The seed script creates:
+- **4 Trainer accounts** (password: `password123`)
+- **4 Trainee accounts** (phone numbers provided)
+- **4 Projects** (React JS, Node JS, Postgres, NextJs)
+- **Demo project** with guest access (no password needed)
+- **Courses and Quizzes** for React JS and Demo projects
+- **Learning paths** defining content order
+
+See the seed script output in logs for login credentials!
+
+### Troubleshooting Seed Issues
+
+If you see seeding errors:
+
+1. **Check if already seeded**: The script checks for existing data and skips if found
+2. **Connection issues**: Verify `DATABASE_URL` is correct
+3. **Missing dependencies**: Ensure `tsx` is available (added to devDependencies)
+4. **Permission errors**: Verify database user has write permissions
+
+### Manual Seed with Verification
+
+To see detailed output:
+
+```bash
+# In Render Shell
+npx prisma migrate deploy
+npx tsx prisma/seed.ts
+```
+
+Expected output:
+```
+🌱 Seeding database...
+✅ Demo accounts created
+✅ Trainers created
+✅ Trainees created
+✅ Projects created
+✅ Demo course created
+✅ Demo quiz created
+✅ Demo project learning path created
+✅ React JS course created
+✅ React JS quiz created
+✅ React JS project learning path created
+```
 
 ---
 
@@ -269,6 +350,106 @@ Then redeploy your frontend.
 ---
 
 ## Troubleshooting
+
+### Database Migration & Seeding Issues
+
+If the automatic migration/seeding fails or you see errors in logs:
+
+**1. Check Migration Logs**
+```bash
+# In Render dashboard → API service → "Deploys" tab
+# Look for the "Pre-deploy command" section
+```
+
+**2. Common Migration Errors**
+
+- **"Can't reach database server"** → `DATABASE_URL` is incorrect
+- **"Migration already applied"** → This is fine, migrations are idempotent
+- **"Permission denied"** → Database user needs migration permissions
+
+**3. Manual Migration Steps**
+
+If automatic migration fails, run manually in Render Shell:
+
+```bash
+# 1. Run migrations
+npx prisma migrate deploy
+
+# 2. Check migration status
+npx prisma migrate status
+
+# 3. Run seeding
+npx tsx prisma/seed.ts
+
+# 4. Verify seeding worked
+npx prisma trainer count  # Should show 5+ trainers
+npx prisma project count  # Should show 5+ projects
+```
+
+**4. Seeding Check - Already Seeded**
+
+If you see "⏭️  Database already seeded, skipping." in logs:
+- This is **expected behavior** - the seed script detected existing data
+- The seed script is idempotent and won't duplicate data
+- To re-seed, you must manually delete data first:
+  ```bash
+  # ⚠️ DANGER: This deletes ALL data
+  npx prisma migrate reset  # Only in development!
+  ```
+
+**5. Seed Script Not Found**
+
+If you get "Cannot find module 'prisma/seed.ts'":
+- Ensure the file exists at `prisma/seed.ts`
+- Check that `tsx` is in dependencies or devDependencies
+- Try running from project root: `npx tsx ./prisma/seed.ts`
+
+**6. Connection Timeout During Seed**
+
+If seeding times out:
+- Supabase free tier has connection limits
+- Try again after 30 seconds
+- Check if migrations completed: `npx prisma migrate status`
+- Run seeding separately: `npx tsx prisma/seed.ts`
+
+**7. Verify Complete Seed**
+
+To check if seeding completed successfully:
+
+```bash
+# In Render Shell
+
+# Check trainer count (should be 5+: demo + 4 trainers)
+npx prisma trainer count
+# Expected: 5
+
+# Check project count (should be 5: 4 projects + 1 demo)
+npx prisma project count  
+# Expected: 5
+
+# Check course count (should be 2: React + Demo)
+npx prisma course count
+# Expected: 2
+
+# Check quiz count (should be 2: React + Demo)
+npx prisma quiz count
+# Expected: 2
+
+# If counts are low, seeding may have failed
+```
+
+**8. Re-running Migration/Seed**
+
+To force re-run (without duplicating data):
+
+```bash
+# This is safe - won't duplicate due to idempotent checks
+npm run db:setup:production
+
+# Or manually:
+npx prisma migrate deploy
+npx tsx prisma/seed.ts
+```
 
 ### GCS Credentials Issue
 
