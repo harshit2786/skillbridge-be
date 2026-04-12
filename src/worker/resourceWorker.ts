@@ -10,17 +10,39 @@ import { PDFParse } from "pdf-parse";
 
 const prisma = new PrismaClient();
 
-const storage = new Storage({
-  projectId: process.env.GCS_PROJECT_ID ?? "",
-  keyFilename: process.env.GCS_KEY_FILE ?? "",
-});
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME || "");
+// Lazy GCS bucket initialization — avoids crashing at startup if env vars are missing
+let _bucket: ReturnType<Storage["bucket"]> | null = null;
+
+function getBucket(): ReturnType<Storage["bucket"]> {
+  if (!_bucket) {
+    const bucketName = process.env.GCS_BUCKET_NAME;
+    if (!bucketName) throw new Error("GCS_BUCKET_NAME environment variable is required");
+
+    const storageOptions: ConstructorParameters<typeof Storage>[0] = {
+      projectId: process.env.GCS_PROJECT_ID,
+    };
+
+    if (process.env.GCS_KEY_BASE64) {
+      // Cloud deployment: credentials supplied as base64-encoded JSON
+      storageOptions.credentials = JSON.parse(
+        Buffer.from(process.env.GCS_KEY_BASE64, "base64").toString(),
+      );
+    } else if (process.env.GCS_KEY_FILE) {
+      // Local dev: credentials loaded from file
+      storageOptions.keyFilename = process.env.GCS_KEY_FILE;
+    }
+
+    const storage = new Storage(storageOptions);
+    _bucket = storage.bucket(bucketName);
+  }
+  return _bucket;
+}
 
 
 // --- Helpers ---
 
 const downloadPdfFromGCS = async (refId: string): Promise<Buffer> => {
-  const [buffer] = await bucket.file(refId).download();
+  const [buffer] = await getBucket().file(refId).download();
   return buffer;
 };
 
