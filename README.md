@@ -1,143 +1,114 @@
-## Folder structure
+# SkillBridge LMS — Backend
 
-- **src/**
-  - `index.ts`
-  - `.DS_Store`
-  - **controllers/**
-    - `content.controller.ts`
-    - `course.controller.ts`
-    - `courseQuestion.controller.ts`
-    - `courseSection.controller.ts`
-    - `playground.controller.ts`
-    - `project.controller.ts`
-    - `question.controller.ts`
-    - `quiz.controller.ts`
-    - `resource.controller.ts`
-    - `section.controller.ts`
-    - `trainee.auth.controller.ts`
-    - `trainer.auth.controller.ts`
-  - **routes/**
-    - `content.routes.ts`
-    - `course.routes.ts`
-    - `courseQuestion.routes.ts`
-    - `courseSection.routes.ts`
-    - `playground.routes.ts`
-    - `project.routes.ts`
-    - `question.routes.ts`
-    - `quiz.routes.ts`
-    - `resource.routes.ts`
-    - `section.routes.ts`
-    - `trainee.auth.routes.ts`
-    - `trainer.auth.routes.ts`
-  - **middlewares/**
-    - `auth.ts`
-    - `errorHandler.ts`
-    - `isAdmin.ts`
-    - `isCourseCreator.ts`
-    - `isQuizCreator.ts`
-  - **services/**
-    - `otp.service.ts`
-    - `sms.service.ts`
-  - **lib/**
-    - `embeddings.ts`
-    - `gcs.ts`
-    - `multer.ts`
-    - `prisma.ts`
-    - `qdrant.ts`
-    - `queue.ts`
-  - **worker/**
-    - `resourceWorker.ts`
-  - **types/**
-    - `express.d.ts`
-  - **utils/**
-    - `generateToken.ts`
+Express.js + TypeScript API, Prisma/PostgreSQL, Redis (BullMQ), Qdrant (embeddings), and workers for resource indexing and quiz grading.
 
-## API endpoints (method + path)
+---
 
-- **Health**
-  - `GET /health`
+## Development setup
 
-- **Trainer auth (`/api/trainer`)**
-  - `POST /api/trainer/login`
-  - `GET /api/trainer/me`
+### Prerequisites
 
-- **Trainee auth (`/api/trainee`)**
-  - `POST /api/trainee/send-otp`
-  - `POST /api/trainee/verify-otp`
-  - `GET /api/trainee/me`
-  - `PATCH /api/trainee/me`
+- Node.js 20+ recommended  
+- `npm install` in this directory  
+- Copy `.env.example` to `.env` and fill in secrets (see below)
 
-- **Projects (`/api/projects`)**
-  - `GET /api/projects`
-  - `GET /api/projects/:projectId`
-  - `POST /api/projects`
-  - `POST /api/projects/:projectId/trainers`
-  - `POST /api/projects/:projectId/trainees`
-  - `DELETE /api/projects/:projectId/trainers/:trainerId`
-  - `DELETE /api/projects/:projectId/trainees/:traineeId`
+---
 
-- **Quizzes (`/api/projects/:projectId/quizzes`)**
-  - `GET /api/projects/:projectId/quizzes`
-  - `GET /api/projects/:projectId/quizzes/:quizId`
-  - `POST /api/projects/:projectId/quizzes`
-  - `POST /api/projects/:projectId/quizzes/:quizId/creators`
-  - `DELETE /api/projects/:projectId/quizzes/:quizId/creators/:trainerId`
-  - `PATCH /api/projects/:projectId/quizzes/:quizId/publish`
+### Google Cloud Storage (bucket and `gcs-key.json`)
 
-- **Courses (`/api/projects/:projectId/courses`)**
-  - `GET /api/projects/:projectId/courses`
-  - `GET /api/projects/:projectId/courses/:courseId`
-  - `POST /api/projects/:projectId/courses`
-  - `POST /api/projects/:projectId/courses/:courseId/creators`
-  - `DELETE /api/projects/:projectId/courses/:courseId/creators/:trainerId`
-  - `PATCH /api/projects/:projectId/courses/:courseId/publish`
+The API and resource worker use a **GCS bucket** for uploads (e.g. knowledge-base PDFs) and authenticate with a **service account JSON key** file.
 
-- **Project contents (`/api/projects/:projectId/contents`)**
-  - `GET /api/projects/:projectId/contents`
-  - `PUT /api/projects/:projectId/contents/reorder`
+1. **Open Google Cloud Console** — [console.cloud.google.com](https://console.cloud.google.com/). Select an existing project or **create** one. Copy the **Project ID** into `.env` as `GCS_PROJECT_ID`.
 
-- **Resources (`/api/projects/:projectId/resources`)**
-  - `GET /api/projects/:projectId/resources`
-  - `GET /api/projects/:projectId/resources/:resourceId`
-  - `POST /api/projects/:projectId/resources`
-  - `DELETE /api/projects/:projectId/resources/:resourceId`
+2. **Enable Cloud Storage** — **APIs & Services → Library**, search for **Cloud Storage API**, and enable it if it is not already enabled.
 
-- **Playground (`/api/projects/:projectId/playground`)**
-  - `POST /api/projects/:projectId/playground/chats`
-  - `GET /api/projects/:projectId/playground/chats`
-  - `GET /api/projects/:projectId/playground/chats/:chatId`
-  - `DELETE /api/projects/:projectId/playground/chats/:chatId`
-  - `POST /api/projects/:projectId/playground/chats/:chatId/messages`
+3. **Create a bucket** — **Cloud Storage → Buckets → Create**. Pick a globally unique bucket name, location type/region, and the rest of the wizard (defaults are fine for local dev). After creation, set `GCS_BUCKET_NAME` in `.env` to that bucket name.
 
-- **Quiz sections (`/api/projects/:projectId/quizzes/:quizId/sections`)**
-  - `GET /api/projects/:projectId/quizzes/:quizId/sections`
-  - `GET /api/projects/:projectId/quizzes/:quizId/sections/:sectionId`
-  - `POST /api/projects/:projectId/quizzes/:quizId/sections`
-  - `PATCH /api/projects/:projectId/quizzes/:quizId/sections/:sectionId`
-  - `DELETE /api/projects/:projectId/quizzes/:quizId/sections/:sectionId`
-  - `PUT /api/projects/:projectId/quizzes/:quizId/sections/reorder`
+4. **Create a service account** — **IAM & Admin → Service Accounts → Create service account**. Give it a name (e.g. `skillbridge-storage`) and create it.
 
-- **Quiz questions (`/api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions`)**
-  - `GET /api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions`
-  - `GET /api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions/:questionId`
-  - `POST /api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions`
-  - `PATCH /api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions/:questionId`
-  - `DELETE /api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions/:questionId`
-  - `PUT /api/projects/:projectId/quizzes/:quizId/sections/:sectionId/questions/reorder`
+5. **Grant bucket access** — For development you can grant the principal at **project** level, for example **Storage Object Admin** (`roles/storage.objectAdmin`), so the account can create, read, and delete objects in your buckets. For tighter control, skip project-wide roles and instead open your bucket → **Permissions → Grant access**, add the service account’s email, and assign **Storage Object Admin** (or split **Object Creator** + **Object Viewer** if that matches your security policy).
 
-- **Course sections (`/api/projects/:projectId/courses/:courseId/sections`)**
-  - `GET /api/projects/:projectId/courses/:courseId/sections`
-  - `GET /api/projects/:projectId/courses/:courseId/sections/:sectionId`
-  - `POST /api/projects/:projectId/courses/:courseId/sections`
-  - `PATCH /api/projects/:projectId/courses/:courseId/sections/:sectionId`
-  - `DELETE /api/projects/:projectId/courses/:courseId/sections/:sectionId`
-  - `PUT /api/projects/:projectId/courses/:courseId/sections/reorder`
+6. **Download the JSON key** — Open the service account → **Keys** tab → **Add key → Create new key → JSON**. A JSON file downloads immediately; you can only download it once.
 
-- **Course questions (`/api/projects/:projectId/courses/:courseId/sections/:sectionId/questions`)**
-  - `GET /api/projects/:projectId/courses/:courseId/sections/:sectionId/questions`
-  - `GET /api/projects/:projectId/courses/:courseId/sections/:sectionId/questions/:questionId`
-  - `POST /api/projects/:projectId/courses/:courseId/sections/:sectionId/questions`
-  - `PATCH /api/projects/:projectId/courses/:courseId/sections/:sectionId/questions/:questionId`
-  - `DELETE /api/projects/:projectId/courses/:courseId/sections/:sectionId/questions/:questionId`
-  - `PUT /api/projects/:projectId/courses/:courseId/sections/:sectionId/questions/reorder`
+7. **Place the key in this repo** — Save that file as `gcs-key.json` under `lms-be/` (next to `package.json`). Point `.env` at it, e.g. `GCS_KEY_FILE=./gcs-key.json`. **Never commit `gcs-key.json`**; it should stay gitignored.
 
+8. **Wire `.env`** — Set `GCS_PROJECT_ID`, `GCS_BUCKET_NAME`, and `GCS_KEY_FILE` to match the steps above (see `.env.example`).
+
+When using **Docker**, the compose file mounts the host key into the container; use the default path `./gcs-key.json` or set `GCS_KEY_FILE_HOST` to the host path of your JSON key (see Option 1 below).
+
+---
+
+### Option 1: Docker (full stack)
+
+Runs PostgreSQL, Redis, Qdrant, one-off **migrate + seed**, then **api**, **worker**, and **grader** containers.
+
+1. Place your GCS service account JSON on the host (default path `./gcs-key.json`, same as `GCS_KEY_FILE` in `.env`).  
+2. Ensure `.env` exists with at least `JWT_SECRET`, `OPENAI_API_KEY`, GCS fields, Twilio (if using SMS OTP), and any Zoom/Resend keys you need. For compose, `DATABASE_URL` / `REDIS_URL` / `QDRANT_URL` are overridden to service names—local URLs in `.env` are fine as placeholders.  
+3. If your key file is not at `./gcs-key.json`, set `GCS_KEY_FILE_HOST` to the host path when starting compose.  
+4. From `lms-be/`:
+
+   ```bash
+   docker compose up --build
+   ```
+
+The API listens on `PORT` (default **3000**). The **migrate** service runs `prisma migrate deploy` and `prisma/seed.ts` once; if the database already has trainers, the seed script **skips** (see seed notes below).
+
+---
+
+### Option 2: Plain local Node (no app containers)
+
+1. **Infrastructure** — run PostgreSQL, Redis, and Qdrant reachable from your machine (install locally or e.g. `docker compose up postgres redis qdrant` if you add a profile, or run only those three services from the same `docker-compose.yml` by stopping after they are healthy and running migrate/seed yourself).  
+2. Set `.env` with matching URLs, for example:
+
+   - `DATABASE_URL=postgresql://user:password@localhost:5432/lms`  
+   - `REDIS_URL=redis://localhost:6379`  
+   - `QDRANT_URL=http://localhost:6333`  
+   - `GCS_KEY_FILE=./gcs-key.json` (or your path) plus bucket/project IDs  
+
+3. **Database**
+
+   ```bash
+   npm run prisma:generate
+   npm run prisma:migrate    # creates/applies migrations (dev)
+   npm run prisma:seed       # optional; see seed behavior below
+   ```
+
+4. **Compile and run** (three terminals for full behavior):
+
+   ```bash
+   npm run dev      # API on PORT (default 3000)
+   npm run worker   # resource pipeline (PDF → chunks → embeddings → Qdrant)
+   npm run grader   # quiz grading queue (MCQ/TF auto; long-answer via OpenAI)
+   ```
+
+There is no dev hot reload; restart processes after code changes.
+
+---
+
+## Seed data (`prisma/seed.ts`)
+
+- Runs only when the database has **no trainers** yet (`trainer.count() === 0`). If you already seeded once, it prints a skip message—empty the DB or reset migrations if you need a fresh seed.  
+- Creates **demo/guest** users, several **trainers** and **trainees**, **projects** (e.g. React JS, Node JS, Postgres, Next.js, plus **Demo Project — SkillBridge Tour**), and sample **courses** / **quizzes** with **learning path** order.  
+- See the script’s end-of-run **console summary** for emails, phones, and passwords (`password123` for seeded trainers; demo trainer uses `demo123`).
+
+Use this seed to explore the product end-to-end from the frontend against a realistic dataset.
+
+---
+
+## Useful commands
+
+| Command | Purpose |
+|--------|---------|
+| `npm run dev` | Build TS and start API |
+| `npm run worker` | Resource worker |
+| `npm run grader` | Quiz grading worker |
+| `npm run prisma:generate` | Regenerate Prisma client |
+| `npm run prisma:migrate` | Dev migrations |
+| `npm run prisma:seed` | Run seed (if DB is empty of trainers) |
+| `npm run prisma:studio` | Prisma Studio UI |
+
+---
+
+## Related docs
+
+Deployment and hosting details live in `DEPLOYMENT.md` and `DEPLOYMENT_CHECKLIST.md` in this folder.

@@ -1,6 +1,12 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+
+// Write GCS key from env if provided (for cloud deployments)                                                                                                                                                
+if (process.env.GCS_KEY_BASE64) {                                                                                                                                                                            
+  const fs = await import("fs");                                                                                                                                                                             
+  fs.writeFileSync("./gcs-key.json", Buffer.from(process.env.GCS_KEY_BASE64, "base64"));                                                                                                                     
+}
 import { errorHandler } from "./middlewares/errorHandler.js";
 import trainerAuthRoutes from "./routes/trainer.auth.routes.js";
 import traineeAuthRoutes from "./routes/trainee.auth.routes.js";
