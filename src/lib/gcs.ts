@@ -1,17 +1,37 @@
 import { Storage } from "@google-cloud/storage";
 
-const storage = new Storage({
-  projectId: process.env.GCS_PROJECT_ID ?? "",
-  keyFilename: process.env.GCS_KEY_FILE ?? "",
-});
+let _bucket: ReturnType<Storage["bucket"]> | null = null;
 
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME || "");
+function getBucket(): ReturnType<Storage["bucket"]> {
+  if (!_bucket) {
+    const bucketName = process.env.GCS_BUCKET_NAME;
+    if (!bucketName) throw new Error("GCS_BUCKET_NAME environment variable is required");
+
+    let storage: Storage;
+    if (process.env.GCS_KEY_BASE64) {
+      storage = new Storage({
+        ...(process.env.GCS_PROJECT_ID && { projectId: process.env.GCS_PROJECT_ID }),
+        credentials: JSON.parse(
+          Buffer.from(process.env.GCS_KEY_BASE64, "base64").toString(),
+        ) as object,
+      });
+    } else {
+      storage = new Storage({
+        ...(process.env.GCS_PROJECT_ID && { projectId: process.env.GCS_PROJECT_ID }),
+        ...(process.env.GCS_KEY_FILE && { keyFilename: process.env.GCS_KEY_FILE }),
+      });
+    }
+
+    _bucket = storage.bucket(bucketName);
+  }
+  return _bucket;
+}
 
 export const uploadToGCS = async (
   file: Express.Multer.File,
   destination: string
 ): Promise<{ refId: string; url: string }> => {
-  const blob = bucket.file(destination);
+  const blob = getBucket().file(destination);
 
   await new Promise<void>((resolve, reject) => {
     const stream = blob.createWriteStream({
@@ -40,7 +60,7 @@ export const uploadToGCS = async (
 };
 
 export const getSignedUrl = async (refId: string): Promise<string> => {
-  const [url] = await bucket.file(refId).getSignedUrl({
+  const [url] = await getBucket().file(refId).getSignedUrl({
     action: "read",
     expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
   });
@@ -48,5 +68,5 @@ export const getSignedUrl = async (refId: string): Promise<string> => {
 };
 
 export const deleteFromGCS = async (refId: string): Promise<void> => {
-  await bucket.file(refId).delete();
+  await getBucket().file(refId).delete();
 };

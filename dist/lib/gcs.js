@@ -1,11 +1,29 @@
 import { Storage } from "@google-cloud/storage";
-const storage = new Storage({
-    projectId: process.env.GCS_PROJECT_ID ?? "",
-    keyFilename: process.env.GCS_KEY_FILE ?? "",
-});
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME || "");
+let _bucket = null;
+function getBucket() {
+    if (!_bucket) {
+        const bucketName = process.env.GCS_BUCKET_NAME;
+        if (!bucketName)
+            throw new Error("GCS_BUCKET_NAME environment variable is required");
+        let storage;
+        if (process.env.GCS_KEY_BASE64) {
+            storage = new Storage({
+                ...(process.env.GCS_PROJECT_ID && { projectId: process.env.GCS_PROJECT_ID }),
+                credentials: JSON.parse(Buffer.from(process.env.GCS_KEY_BASE64, "base64").toString()),
+            });
+        }
+        else {
+            storage = new Storage({
+                ...(process.env.GCS_PROJECT_ID && { projectId: process.env.GCS_PROJECT_ID }),
+                ...(process.env.GCS_KEY_FILE && { keyFilename: process.env.GCS_KEY_FILE }),
+            });
+        }
+        _bucket = storage.bucket(bucketName);
+    }
+    return _bucket;
+}
 export const uploadToGCS = async (file, destination) => {
-    const blob = bucket.file(destination);
+    const blob = getBucket().file(destination);
     await new Promise((resolve, reject) => {
         const stream = blob.createWriteStream({
             resumable: false,
@@ -29,13 +47,13 @@ export const uploadToGCS = async (file, destination) => {
     };
 };
 export const getSignedUrl = async (refId) => {
-    const [url] = await bucket.file(refId).getSignedUrl({
+    const [url] = await getBucket().file(refId).getSignedUrl({
         action: "read",
         expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
     });
     return url;
 };
 export const deleteFromGCS = async (refId) => {
-    await bucket.file(refId).delete();
+    await getBucket().file(refId).delete();
 };
 //# sourceMappingURL=gcs.js.map
