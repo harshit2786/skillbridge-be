@@ -185,7 +185,10 @@ const startWorker = async () => {
 
   const worker = new Worker("resource-processing", processResource, {
     connection: redisConnection,
-    concurrency: 2, // Process 2 jobs at a time
+    concurrency: 2,
+    stalledInterval: 300_000,  // check stalled jobs every 5 min (default: 30s)
+    lockDuration: 300_000,     // job lock lasts 5 min
+    lockRenewTime: 150_000,    // renew lock halfway through
   });
 
   worker.on("completed", (job) => {

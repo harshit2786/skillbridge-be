@@ -395,6 +395,9 @@ const startWorker = async () => {
   const worker = new Worker("quiz-grading", processQuizGrading, {
     connection: redisConnection,
     concurrency: 3,
+    stalledInterval: 300_000,  // check stalled jobs every 5 min (default: 30s)
+    lockDuration: 300_000,
+    lockRenewTime: 150_000,
     limiter: {
       max: 10,
       duration: 60000, // max 10 jobs per minute (respect OpenAI rate limits)
